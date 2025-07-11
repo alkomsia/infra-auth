@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+casbin
+casbin_sqlalchemy_adapter
+sqlalchemy
+psycopg2-binary

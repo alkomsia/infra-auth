@@ -1,0 +1,4 @@
+p, admin, /dashboard, GET
+p, admin, /settings, POST
+g, alice, admin
+

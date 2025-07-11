@@ -1,0 +1,34 @@
+FROM golang:1.21 as builder
+
+WORKDIR /app
+RUN git clone https://github.com/casdoor/casdoor.git . \
+    && go mod tidy \
+    && go build
+
+FROM node:20 as frontend
+WORKDIR /casdoor/web
+RUN git clone https://github.com/casdoor/casdoor.git /casdoor \
+    && cd /casdoor/web \
+    && yarn install \
+    && yarn build
+
+FROM alpine:latest
+
+WORKDIR /casdoor
+COPY --from=builder /app/casdoor .
+COPY --from=frontend /casdoor/web/build /casdoor/web/build
+
+COPY ./conf /casdoor/conf
+EXPOSE 8000
+
+CMD ["./casdoor"]
+
+
+
+
+
+
+
+
+
+

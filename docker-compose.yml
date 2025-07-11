@@ -1,0 +1,75 @@
+version: '3.9'
+
+services:
+  casbin:
+    build:
+      context: ./casbin  # Указываем путь к папке, где находится Dockerfile для Python-приложения
+      dockerfile: Dockerfile  # Указываем Dockerfile, если он имеет нестандартное имя или путь
+    container_name: casbin-api
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.casbin.rule=Host(`casbin.quelleo.com`)"
+      - "traefik.http.routers.casbin.entrypoints=websecure"
+      - "traefik.http.routers.casbin.tls=true"
+      - "traefik.http.routers.casbin.tls.certresolver=myresolver"
+      - "traefik.http.services.casbin.loadbalancer.server.port=8000"
+#      - "traefik.http.routers.casbin-http.rule=Host(`casbin.quelleo.com`)"
+  #    - "traefik.http.routers.casbin-http.entrypoints=web"
+      - "traefik.http.routers.casbin.middlewares=redirect-to-https@docker"
+      #- "traefik.http.routers.casbin.middlewares=oauth2-auth"
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:Alk0mAlk0m@postgres:5432/casbindb?sslmode=disable
+    networks:
+      - app-network
+      - traefik-network
+    depends_on:
+      - casdoor
+
+  casdoor:
+    image: casbin/casdoor:latest
+    container_name: casdoor
+    restart: always
+    environment:
+      - CASDOOR_APP_NAME=casdoor
+      - CASDOOR_APP_URL=https://login.quelleo.com
+      - CASDOOR_AUTO_REDIRECT_TO_LOGIN=true
+      - CASDOOR_SECRET=Alk0mAlk0m
+      - RUNNING_IN_DOCKER=true
+      - DATABASE_URL=postgres://postgres:Alk0mAlk0m@postgres:5432/casdoor?sslmode=disable
+    labels:
+      - "traefik.enable=true"
+      # HTTP router (порт 80)
+      - "traefik.http.routers.casdoor.rule=Host(`casdoor.quelleo.com`)"
+      - "traefik.http.routers.casdoor.entrypoints=web"
+      - "traefik.http.routers.casdoor.middlewares=redirect-to-https@docker"
+
+      # HTTPS router (порт 443)
+      - "traefik.http.routers.casdoor-tls.rule=Host(`casdoor.quelleo.com`)"
+      - "traefik.http.routers.casdoor-tls.entrypoints=websecure"
+      - "traefik.http.routers.casdoor-tls.tls=true"
+      - "traefik.http.routers.casdoor-tls.tls.certresolver=myresolver"
+ 
+      - "traefik.http.routers.casdoor-login.rule=Host(`login.quelleo.com`)"
+      - "traefik.http.routers.casdoor-login.entrypoints=websecure"
+      - "traefik.http.routers.casdoor-login.tls=true"
+      - "traefik.http.routers.casdoor-login.tls.certresolver=myresolver"
+      - "traefik.http.services.casdoor-login.loadbalancer.server.port=8000"
+
+
+    ports:
+      - "8081:8000"
+    volumes:
+      - ./casdoor/casdoor-config:/conf
+    networks:
+      - app-network
+      - traefik-network
+
+networks:
+  app-network:
+    external: true
+  traefik-network:
+    external: true
+
